@@ -1,4 +1,4 @@
-package fchandler2go
+package handler2gin
 
 import (
 	"fmt"
@@ -10,14 +10,14 @@ import (
 
 func T(h interface{}, cfg ...config.Config) gin.HandlerFunc {
 	//load cfg
-	realConfig := config.Config{}
-	if len(cfg) == 0 {
+	realConfig := config.Config{Output: config.Output{RequestIDFromMock: true}}
+	if len(cfg) != 0 {
 		realConfig = config.Config{}
 	}
 
 	// first check if it is ok
-	result := core.NewReflector(h)
-	IsValid, reason := core.CheckValid(result)
+	reflector := core.NewReflector(h)
+	IsValid, reason := reflector.CheckValid()
 	if IsValid == false {
 		goto rtn
 	}
@@ -35,7 +35,7 @@ rtn:
 		// if we don't need we can skip
 		var request *events.HTTPTriggerEvent
 		var err error
-		if result.In.HasInput == true {
+		if reflector.In.Input != nil {
 
 			request, err = core.ConvertRequest(c, realConfig)
 			fmt.Printf("eventrel: %v\n", *request)
@@ -48,7 +48,7 @@ rtn:
 		}
 
 		// use handler
-		res, err := result.Invoke(c, request)
+		res, err := reflector.Invoke(c, request)
 		response, ok := res.(events.HTTPTriggerResponse)
 		if !ok {
 

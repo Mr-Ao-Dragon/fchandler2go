@@ -1,7 +1,5 @@
 package utills
 
-import "fmt"
-
 func Capitalize(str string) string {
 	var upperStr string
 	vv := []rune(str) // blog gard
@@ -10,7 +8,6 @@ func Capitalize(str string) string {
 			if vv[i] >= 97 && vv[i] <= 122 {
 				vv[i] -= 32
 			} else {
-				fmt.Println("Not begins with lowercase letter,")
 				return str
 			}
 		} else {

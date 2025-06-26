@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/aliyun/fc-runtime-go-sdk/events"
 
@@ -18,157 +19,190 @@ type F struct {
 }
 
 type in struct {
-	Num      int
-	HasCtx   bool
-	HasInput bool
+	Ctx       reflect.Type
+	Input     reflect.Type
+	inNum     int
+	inputType reflect.Type
 }
 
 type out struct {
-	Num    int
-	HasOut bool
-	HasErr bool
+	OutPut     reflect.Type
+	Err        reflect.Type
+	outNum     int
+	outputType reflect.Type
+}
+
+func GetInputAllowedList() []reflect.Type {
+	return []reflect.Type{
+		reflect.TypeOf(events.HTTPTriggerEvent{}),
+
+		reflect.TypeOf([]byte(nil)),
+	}
+}
+func GetOutputAllowedList() []reflect.Type {
+	return []reflect.Type{
+		reflect.TypeOf(&events.HTTPTriggerResponse{}),
+	}
+}
+
+func IsAllowed(list []reflect.Type, i interface{}) (bool, reflect.Type) {
+	if t, ok := i.(reflect.Type); ok {
+		for _, v := range list {
+			if t.ConvertibleTo(v) {
+				return true, v
+			}
+		}
+		return false, nil
+	}
+	for _, v := range list {
+		if v.ConvertibleTo(reflect.TypeOf(i)) {
+			return true, v
+		}
+	}
+	return false, nil
 }
 
 func NewReflector(i interface{}) *F {
 	t := reflect.TypeOf(i)
-
 	isFunc := t.Kind() == reflect.Func
 	if !isFunc {
 		return &F{IsFunc: false}
 	}
-
 	numIn := t.NumIn()
 	numOut := t.NumOut()
+	var ctx reflect.Type
+	var input reflect.Type
+	var output reflect.Type
+	var err reflect.Type
 
 	hasCtx := numIn >= 1 && t.In(0) == reflect.TypeOf((*context.Context)(nil)).Elem()
+	if hasCtx {
+		ctx = t.In(0)
+	}
+	if numIn >= 1 {
+		switch numIn {
+		case 2:
+			if !hasCtx {
 
-	hasInput := numIn >= 1
+				break
+			}
+			input = t.In(1)
+			break
+		case 1:
+			if hasCtx {
+				break
+			}
+			input = t.In(0)
+			break
+		}
+	}
+	if errType := reflect.TypeOf((*error)(nil)).Elem(); numOut >= 1 && t.Out(numOut-1).Implements(errType) {
+		err = t.Out(numOut - 1)
+	} else if numOut >= 1 {
 
-	errType := reflect.TypeOf((*error)(nil)).Elem()
-	hasErr := numOut >= 1 && t.Out(numOut-1).Implements(errType)
-	hasOut := numOut > 1
+	}
+
+	if numOut == 2 {
+		output = t.Out(0)
+	}
 
 	return &F{
 		fn:     i,
 		t:      t,
 		IsFunc: isFunc,
 		In: in{
-			Num:      numIn,
-			HasCtx:   hasCtx,
-			HasInput: hasInput,
+			inNum: numIn,
+			Ctx:   ctx,
+			Input: input,
 		},
 		Out: out{
-			Num:    numOut,
-			HasOut: hasOut,
-			HasErr: hasErr,
+			outNum: numOut,
+			OutPut: output,
+			Err:    err,
 		},
 	}
 }
-func CheckValid(res *F) (bool, error) {
+func (res *F) CheckValid() (bool, error) {
 	if res.IsFunc == false {
 		return false, errors.New("not a function")
 	}
-	//notfunc
-	if res.In.Num > 2 {
-		return false, errors.New("too many input")
+	if res.In.inNum > 2 {
+		return false, errors.New("input num too much")
 	}
-	if res.Out.Num > 2 {
-		return false, errors.New("too many output")
+	if res.Out.outNum > 2 {
+		return false, errors.New("output num too much")
 	}
-	if res.In.Num == 2 {
-
-		if res.In.HasCtx == false || res.In.HasInput == false {
-			return false, errors.New("input error need (ctx , input) with correct order")
-		}
-
-		ev1 := reflect.ValueOf(events.HTTPTriggerEvent{}).Type()
-		ev2 := reflect.ValueOf([]byte(nil)).Type()
-
-		target := res.t.In(1)
-		if !ev1.ConvertibleTo(target) && !ev2.ConvertibleTo(target) {
-			return false, errors.New("input error: cannot match")
-		}
-	}
-	if res.Out.Num == 2 {
-		if res.Out.HasOut == false || res.Out.HasErr == false {
-			return false, errors.New("output error, need (output , err) with correct order")
-		}
-		ev := reflect.ValueOf(events.HTTPTriggerResponse{}).Type()
-		ev2 := reflect.ValueOf(&events.HTTPTriggerResponse{}).Type()
-
-		target := res.t.Out(0)
-		if !ev.ConvertibleTo(target) && !ev2.ConvertibleTo(target) {
-			return false, errors.New("output error: cannot match")
+	if res.In.Input != nil {
+		Model := GetInputAllowedList()
+		var allowed bool
+		if allowed, res.In.inputType = IsAllowed(Model, res.In.Input); !allowed {
+			return false, errors.New("input type not allowed")
 		}
 
 	}
-	if res.In.Num == 1 {
-
-		ev1 := reflect.ValueOf(events.HTTPTriggerEvent{}).Type()
-		ev2 := reflect.ValueOf([]byte(nil)).Type()
-
-		target := res.t.In(0)
-		if !ev1.ConvertibleTo(target) && !ev2.ConvertibleTo(target) {
-			return false, errors.New("input error: cannot match")
+	if res.Out.OutPut != nil {
+		Model := GetOutputAllowedList()
+		var allowed bool
+		if allowed, res.Out.outputType = IsAllowed(Model, res.Out.OutPut); !allowed {
+			return false, errors.New("output type not allowed")
 		}
 	}
-	if res.Out.Num == 1 {
 
-		if res.Out.HasErr == false {
-			return false, errors.New("output error, you must return err if you only return one value")
-		}
-		ev := reflect.ValueOf(events.HTTPTriggerResponse{}).Type()
-		ev2 := reflect.ValueOf(&events.HTTPTriggerResponse{}).Type()
-		target := res.t.Out(0)
-		if !ev.ConvertibleTo(target) && !ev2.ConvertibleTo(target) {
-			return false, errors.New("output error: cannot match")
-		}
-
+	if res.In.Ctx == nil && res.In.inNum == 2 {
+		return false, errors.New("bad input, ctx must be first")
 	}
+	if res.Out.Err == nil && res.Out.outNum != 0 {
+		return false, errors.New(" the last output must be error")
+	}
+
 	res.safe = true
 	return true, nil
 }
-func (res F) Invoke(ctx context.Context, event *events.HTTPTriggerEvent) (interface{}, error) {
-	// 不做检查
-	args := []reflect.Value{}
+
+func (res *F) Invoke(ctx context.Context, event *events.HTTPTriggerEvent) (interface{}, error) {
+	// 严格检查
+
 	if res.safe == false {
-		return nil, errors.New("safe check failed or not completed")
+		return nil, errors.New("safe check failed or not completed,please .CheckValid() first")
 	}
-
-	switch res.In.Num {
-	case 2:
+	//构造In args
+	args := []reflect.Value{}
+	if res.In.Ctx != nil {
 		args = append(args, reflect.ValueOf(ctx))
-		args = append(args, reflect.ValueOf(event).Elem().Convert(res.t.In(1)))
-		break
-
-	case 1:
-		args = append(args, reflect.ValueOf(event).Elem().Convert(res.t.In(0)))
-		break
 	}
+	if res.In.Input != nil {
+		switch res.In.inputType {
+		case reflect.TypeOf(events.HTTPTriggerEvent{}):
+			args = append(args, reflect.ValueOf(event).Elem().Convert(res.In.Input))
+			break
+		case reflect.TypeOf([]byte(nil)):
+			j, err := json.Marshal(event)
+			if err != nil {
+				return nil, errors.New("Json marshal error")
+			}
+			args = append(args, reflect.ValueOf(j))
+			break
+		default:
+			return nil, errors.New("Service Fatal Error crashed bad type")
+		}
+
+	}
+	// 执行
 	results := reflect.ValueOf(res.fn).Call(args)
-	if res.Out.Num != len(results) {
+	// 解析结果
+	if res.Out.outNum != len(results) {
 		return nil, errors.New("Internal Server Error")
 	}
-	switch res.Out.Num {
-	case 2:
-		var o interface{}
-		target := reflect.ValueOf(events.HTTPTriggerResponse{}).Type()
-		if reflect.ValueOf(results[0].Interface()).Kind() == reflect.Ptr {
-			o = reflect.ValueOf(results[0].Interface()).Elem().Convert(target).Interface()
-
-		} else {
-			o = reflect.ValueOf(results[0].Interface()).Convert(target).Interface()
-		}
-		if results[1].Interface() == nil {
-			return o, nil
-		}
-		return o, results[1].Interface().(error)
-
-	case 1:
-		return results[0].Interface(), nil
-
-	case 0:
-		return nil, nil
+	var err error
+	var output interface{}
+	if res.Out.Err != nil && results[res.Out.outNum-1].Interface() != nil {
+		err = results[res.Out.outNum-1].Interface().(error)
 	}
-	return nil, errors.New("unknown error")
+	if res.Out.OutPut != nil {
+		target := reflect.ValueOf(events.HTTPTriggerResponse{}).Type()
+		output = results[0].Elem().Convert(target).Interface()
+	}
+
+	return output, err
+
 }

@@ -14,7 +14,7 @@ import (
 
 func main() {
 	router := gin.Default()
-	router.Any("/*all", fchandler2go.T(HandleRequest))
+	router.Any("/*all", handler2gin.T(HandleRequest))
 
 	router.Run(":8080")
 }
@@ -69,6 +69,11 @@ func (h *HTTPTriggerResponse) WithBody(body string) *HTTPTriggerResponse {
 	return h
 }
 
+func GetRawRequestEvent(event []byte) (*HTTPTriggerResponse, error) {
+	fmt.Printf("raw event: %s\n", string(event))
+	return NewHTTPTriggerResponse(http.StatusOK).WithBody(string(event)), nil
+}
+
 func HandleRequest(event HTTPTriggerEvent) (*HTTPTriggerResponse, error) {
 	fmt.Printf("event: %v\n", event)
 	if event.Body == nil {
@@ -86,7 +91,7 @@ func HandleRequest(event HTTPTriggerEvent) (*HTTPTriggerResponse, error) {
 		reqBody = string(decodedByte)
 	} else {
 		return NewHTTPTriggerResponse(http.StatusBadRequest).
-			WithBody(fmt.Sprintf("HELLO WORLD", nil)), nil
+			WithBody("HELLO WORLD"), nil
 
 	}
 

@@ -13,7 +13,7 @@ type Config struct {
 }
 
 type Output struct {
-	RequestIDFromMock   bool
+	RequestIDFromMock   bool //默认
 	RequestIDFromCustom string
 }
 
