@@ -20,3 +20,4 @@ package fchandler2go
 //	//fc.Start()
 //}
 // 伪人写的代码 勿看
+//awaa

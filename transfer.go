@@ -7,7 +7,7 @@ import (
 )
 
 func T(h *interface{}) gin.HandlerFunc {
-	// first check if its ok
+	// first check if it is ok
 	result := core.Check(h)
 	IsValid, reason := core.CheckVaild(result)
 	if IsValid == false {
@@ -16,14 +16,14 @@ func T(h *interface{}) gin.HandlerFunc {
 	// then map the data
 rtn:
 	return func(c *gin.Context) {
-		// if there is an error call back that i failed
+		// if there is a dog call back that I failed
 		if IsValid != true {
 			c.String(400, reason.Error())
 			return
 		}
 
 		// map the context
-		// if dont need we can skip
+		// if we don't need we can skip
 		var request *events.HTTPTriggerEvent
 		var err error
 		if result.In.HasInput == true {
