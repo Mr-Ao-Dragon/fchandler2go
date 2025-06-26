@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	github.com/aliyun/fc-runtime-go-sdk v0.3.1
 	github.com/gin-gonic/gin v1.10.1
+	github.com/google/uuid v1.6.0
 )
 
 require (

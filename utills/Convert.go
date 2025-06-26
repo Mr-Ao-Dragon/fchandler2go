@@ -1,11 +1,12 @@
-package core
+package utills
 
 import (
 	"encoding/base64"
+
 	"io"
 )
 
-func param2map(m map[string][]string) *map[string]string {
+func Param2map(m map[string][]string) *map[string]string {
 	m2 := make(map[string]string)
 	for k, v := range m {
 		m2[k] = ""
@@ -79,4 +80,16 @@ func IsBase64(typeof string) bool {
 	}
 	q := !textTypes[typeof]
 	return q
+}
+func IsBadResHeader(key string) bool {
+	badHeader := map[string]bool{
+		"connection":          true,
+		"content-length":      true,
+		"date":                true,
+		"keep-alive":          true,
+		"server":              true,
+		"content-disposition": true,
+	}
+	return badHeader[key]
+
 }
