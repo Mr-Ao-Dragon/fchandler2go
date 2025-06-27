@@ -1,16 +1,16 @@
-package core
+package AliyunWebFC
 
 import (
 	"encoding/base64"
 	"github.com/aliyun/fc-runtime-go-sdk/events"
-	"github.com/danvei233/fchandler2go/config"
-	"github.com/danvei233/fchandler2go/mock"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/config"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/mock"
 	"github.com/danvei233/fchandler2go/utills"
 	"github.com/gin-gonic/gin"
 	"strings"
 )
 
-func Recall(c *gin.Context, response events.HTTPTriggerResponse, config config.Config) error {
+func Recall(c *gin.Context, response *events.HTTPTriggerResponse, config config.Config) error {
 	w := c.Writer
 	// set default header
 	w.Header().Set("Content-Type", "application/json")

@@ -1,69 +1,69 @@
 package handler2gin
 
 import (
-	"fmt"
-	"github.com/aliyun/fc-runtime-go-sdk/events"
-	"github.com/danvei233/fchandler2go/config"
+	"errors"
 	"github.com/danvei233/fchandler2go/core"
+	"github.com/danvei233/fchandler2go/domain"
 	"github.com/gin-gonic/gin"
 )
 
-func T(h interface{}, cfg ...config.Config) gin.HandlerFunc {
+type Reflector struct {
+	h domain.HandlerStandardizer
+	M domain.MapProvider
+}
+
+func NewReflector(M domain.MapProvider) *Reflector {
+	return &Reflector{M: M}
+}
+
+func (r *Reflector) T(h interface{}) gin.HandlerFunc {
 	//load cfg
-	realConfig := config.Config{Output: config.Output{RequestIDFromMock: true}}
-	if len(cfg) != 0 {
-		realConfig = config.Config{}
+	r.h = core.NewStandardizer(&h)
+	var err error
+	t, InType := r.h.CheckOutputValid(r.M.GetOutputAllowedList())
+	if !t {
+		err = errors.New("match output error")
+	}
+	t, _ = r.h.CheckInputValid(r.M.GetInputAllowedList())
+
+	if !t {
+		err = errors.New("match input error")
 	}
 
-	// first check if it is ok
-	reflector := core.NewReflector(h)
-	IsValid, reason := reflector.CheckValid()
-	if IsValid == false {
-		goto rtn
-	}
-
-	// then map the data
-rtn:
 	return func(c *gin.Context) {
 		// if there is a dog call back that I failed
-		if IsValid != true {
-			c.String(500, reason.Error())
+		if err != nil {
+			c.String(500, err.Error())
 			return
 		}
-
-		// map the context
-		// if we don't need we can skip
-		var request *events.HTTPTriggerEvent
-		var err error
-		if reflector.In.Input != nil {
-
-			request, err = core.ConvertRequest(c, realConfig)
-			fmt.Printf("eventrel: %v\n", *request)
+		var res []byte
+		if InType != nil {
+			res, err = r.M.TransIn(c)
 			if err != nil {
 				c.String(500, err.Error())
+				return
 			}
-
 		} else {
-			request = &events.HTTPTriggerEvent{}
-		}
+			res = []byte{}
 
+		}
+		// if we don't need we can skip
 		// use handler
-		res, err := reflector.Invoke(c, request)
-		response, ok := res.(events.HTTPTriggerResponse)
-		if !ok {
-
-			if err != nil {
-				c.JSON(502, gin.H{"msg": err.Error()})
-			}
-			//c.JSON(200, gin.H{"msg": "No response"})
-			// 如果您的函数返回有效的JSON但是没有包含statusCode字段，或者返回的不是有效的JSON，函数计算会做出以下假设，构造响应结构体。
-
-		}
-		//post out data
-
-		err = core.Recall(c, response, realConfig)
+		var req []byte
+		fc, err := r.h.GetStandardHandler()
 		if err != nil {
-			panic(err)
+			c.String(500, err.Error())
+			return
+		}
+		req, err = fc(c, res)
+		if err != nil {
+			c.String(500, err.Error())
+			return
+		}
+		err = r.M.TransOut(c, req)
+		if err != nil {
+			c.String(500, err.Error())
+			return
 		}
 		return
 

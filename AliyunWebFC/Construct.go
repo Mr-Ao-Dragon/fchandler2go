@@ -1,9 +1,9 @@
-package core
+package AliyunWebFC
 
 import (
 	"github.com/aliyun/fc-runtime-go-sdk/events"
-	"github.com/danvei233/fchandler2go/config"
-	"github.com/danvei233/fchandler2go/mock"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/config"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/mock"
 	"github.com/danvei233/fchandler2go/utills"
 	"github.com/gin-gonic/gin"
 	"strconv"

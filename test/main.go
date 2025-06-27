@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aliyun/fc-runtime-go-sdk/events"
 	"github.com/danvei233/fchandler2go"
+	"github.com/danvei233/fchandler2go/AliyunWebFC"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -14,7 +15,9 @@ import (
 
 func main() {
 	router := gin.Default()
-	router.Any("/*all", handler2gin.T(HandleRequest))
+	a := new(AliyunWebFC.AliyunWebFCProvider)
+	transfer := handler2gin.NewReflector(a)
+	router.Any("/*all", transfer.T(GetRawRequestEvent))
 
 	router.Run(":8080")
 }

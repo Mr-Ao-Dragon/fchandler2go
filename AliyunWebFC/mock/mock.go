@@ -3,7 +3,7 @@ package mock
 import (
 	"fmt"
 	"github.com/aliyun/fc-runtime-go-sdk/events"
-	"github.com/danvei233/fchandler2go/config"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/config"
 	"github.com/danvei233/fchandler2go/utills"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

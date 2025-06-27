@@ -32,6 +32,7 @@ func Header2map(m map[string][]string) *map[string]string {
 	}
 	return &m2
 }
+
 func BodyReader(b io.ReadCloser, typeof string) (string, error) {
 	buffer := make([]byte, 1024)
 	var final []byte

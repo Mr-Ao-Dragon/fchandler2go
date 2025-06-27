@@ -101,30 +101,30 @@ func HandleRequestWithContext(ctx context.Context, event events.HTTPTriggerEvent
 package main
 
 import (
-    "github.com/aliyun/fc-runtime-go-sdk/events"
-    "github.com/danvei233/fchandler2go"
-    "github.com/danvei233/fchandler2go/config"
-    "github.com/gin-gonic/gin"
+	"github.com/aliyun/fc-runtime-go-sdk/events"
+	"github.com/danvei233/fchandler2go"
+	"github.com/danvei233/fchandler2go/AliyunWebFC/config"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-    router := gin.Default()
+	router := gin.Default()
 
-    // Configure the handler with options
-    cfg := config.Config{
-        Output: config.Output{
-            RequestIDFromMock: true,
-        },
-    }
+	// Configure the handler with options
+	cfg := config.Config{
+		Output: config.Output{
+			RequestIDFromMock: true,
+		},
+	}
 
-    router.Any("/*all", handler2gin.T(HandleRequest, cfg))
+	router.Any("/*all", handler2gin.T(HandleRequest, cfg))
 
-    router.Run(":8080")
+	router.Run(":8080")
 }
 
 func HandleRequest(event events.HTTPTriggerEvent) (*events.HTTPTriggerResponse, error) {
-    // Handler implementation
-    // ...
+	// Handler implementation
+	// ...
 }
 ```
 
